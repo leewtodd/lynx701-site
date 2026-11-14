@@ -264,13 +264,13 @@ footer{padding:28px 0;color:var(--muted);font-size:14px;text-align:center}
     </div>
     <form class="contact-card" id="inquiry">
       <strong style="font-size:19px">Ask about an office</strong>
-      <label for="n">Name</label><input id="n" required>
-      <label for="c">Your email</label><input id="c" type="email" required>
+      <label for="n">Name</label><input id="n" name="name" required>
+      <label for="c">Your email</label><input id="c" name="email" type="email" required>
       <label for="o">Office of interest</label>
-      <select id="o"><option>Not sure yet</option><option>Office 15 (windowed, $1,000)</option><option>Office 19 (interior, $600)</option><option>Office 17 (interior, $600)</option><option>Office 16 (interior, $600)</option><option>Office 4 (interior, $400)</option></select>
-      <label for="m">Anything else? (business type, move-in date)</label><textarea id="m"></textarea>
+      <select id="o" name="office"><option>Not sure yet</option><option>Office 15 (windowed, $1,000)</option><option>Office 19 (interior, $600)</option><option>Office 17 (interior, $600)</option><option>Office 16 (interior, $600)</option><option>Office 4 (interior, $400)</option></select>
+      <label for="m">Anything else? (business type, move-in date)</label><textarea id="m" name="message"></textarea>
+      <input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;height:0;width:0;opacity:0">
       <p style="margin:16px 0 0"><button class="btn" type="submit">Send inquiry</button></p>
-      <p style="font-size:13px;color:var(--muted);margin:10px 0 0">Opens your email app with your message filled in.</p>
     </form>
   </div>
 </section>
@@ -281,13 +281,51 @@ footer{padding:28px 0;color:var(--muted);font-size:14px;text-align:center}
 </footer>
 
 <script>
-// Set the inquiry email here once it is known.
-var INQUIRY_EMAIL = "lee@lynx701.com";
+var FORMSUBMIT_ENDPOINT = "https://formsubmit.co/ajax/lee@lynx701.com";
 document.getElementById("inquiry").addEventListener("submit", function (e) {
   e.preventDefault();
-  var v = function (id) { return document.getElementById(id).value; };
-  var body = "Name: " + v("n") + "\nEmail: " + v("c") + "\nOffice: " + v("o") + "\n\n" + v("m");
-  window.location.href = "mailto:" + INQUIRY_EMAIL + "?subject=" + encodeURIComponent("Lynx 701 office inquiry") + "&body=" + encodeURIComponent(body);
+  var form = e.target;
+  var btn = form.querySelector('button[type="submit"]');
+  var honey = form.elements["_honey"] ? form.elements["_honey"].value : "";
+  if (btn) btn.disabled = true;
+  var payload = {
+    name: form.elements["name"].value,
+    email: form.elements["email"].value,
+    office: form.elements["office"].value,
+    message: form.elements["message"].value,
+    _subject: "Lynx 701 office inquiry",
+    _replyto: form.elements["email"].value,
+    _template: "table",
+    _captcha: "false",
+    _honey: honey
+  };
+  fetch(FORMSUBMIT_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(function (res) { return res.json(); })
+  .then(function (data) {
+    if (String(data.success) === "true") {
+      form.innerHTML = "<p style=\"margin:0;font-size:17px\">Thanks! We'll reply within one business day with tour times.</p>";
+    } else {
+      throw new Error(data.message || "submit failed");
+    }
+  })
+  .catch(function () {
+    if (btn) btn.disabled = false;
+    var err = form.querySelector(".form-error");
+    if (!err) {
+      err = document.createElement("p");
+      err.className = "form-error";
+      err.style.cssText = "font-size:14px;color:#b42318;margin:12px 0 0";
+      form.appendChild(err);
+    }
+    err.textContent = "Something went wrong. Please email lee@lynx701.com.";
+  });
 });
 </script>
 </body>
